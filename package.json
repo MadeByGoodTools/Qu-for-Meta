@@ -1,0 +1,43 @@
+{
+  "name": "qu-for-meta",
+  "version": "1.2.0",
+  "description": "Qu for Meta — a visual desktop publishing workspace for Facebook Pages and Instagram professional accounts.",
+  "author": "Good Tools",
+  "license": "MPL-2.0",
+  "main": "main.js",
+  "packageManager": "pnpm@11.19.0",
+  "scripts": {
+    "start": "electron .",
+    "dist:mac": "electron-builder --mac dmg zip --arm64",
+    "dist:win": "electron-builder --win nsis --x64"
+  },
+  "dependencies": {
+    "electron-updater": "^6.6.2"
+  },
+  "devDependencies": {
+    "electron": "^37.2.3",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "ca.goodtools.qumeta",
+    "productName": "Qu for Meta",
+    "files": ["main.js", "updater.js", "preload.js", "renderer.js", "index.html", "styles.css", "enhancements.css", "assets/**/*"],
+    "publish": [{ "provider": "github", "owner": "MadeByGoodTools", "repo": "Qu-Meta-Updates" }],
+    "mac": {
+      "category": "public.app-category.social-networking",
+      "target": ["dmg", "zip"],
+      "icon": "assets/qu-meta-1024.png"
+    },
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "assets/qu-meta-1024.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Qu for Meta"
+    }
+  }
+}

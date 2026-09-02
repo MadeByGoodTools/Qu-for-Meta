@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Qu for Meta</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="enhancements.css">
+  <style>.templates-view{min-height:520px}.templates-intro{max-width:700px;color:var(--muted);line-height:1.55}.template-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:22px}.template-card{padding:17px;border:1px solid var(--line);border-radius:14px;background:#181d25}.template-card strong,.template-card small{display:block}.template-card small{color:var(--muted);margin:7px 0 14px}.template-card div{display:flex;gap:7px}.template-card button{padding:7px 10px}</style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><img src="assets/qu-meta.svg" alt=""><div><strong>Qu</strong><small>for Meta</small></div></div>
+      <button class="primary wide" id="new-post">＋ New post</button>
+      <nav>
+        <button class="active" data-view="workspace">▦ Workspace <b id="draft-count">0</b></button>
+        <button data-view="calendar">▣ Calendar</button>
+        <button data-view="templates">◇ Templates</button>
+      </nav>
+      <section class="mini-calendar">
+        <header><button id="month-prev">‹</button><strong id="month-title"></strong><button id="month-next">›</button></header>
+        <div class="week"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
+        <div class="days" id="mini-days"></div>
+      </section>
+      <div class="grow"></div>
+      <button class="account-card" id="connect-meta"><span class="meta-orb">∞</span><span><strong id="account-name">Connect Meta</strong><small id="account-detail">Pages + Instagram</small></span><b>›</b></button>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div><p class="eyebrow">Publishing workspace</p><h1>One calm place for your Meta content.</h1></div>
+        <div class="actions"><span class="saved" id="publish-status">Ready</span><button id="save-template">Save template</button><button class="primary" id="publish-ready">Publish ready <span id="ready-count">0</span></button></div>
+      </header>
+
+      <section class="stats">
+        <article><span>Drafts</span><strong id="stat-drafts">0</strong><small>saved locally</small></article>
+        <article><span>Ready</span><strong id="stat-ready">0</strong><small>validated</small></article>
+        <article><span>Media</span><strong id="stat-media">0</strong><small>files prepared</small></article>
+        <article class="gradient"><span>Next scheduled post</span><strong id="next-post">Nothing scheduled</strong><small>Your calendar, your pace</small></article>
+      </section>
+
+      <section class="workspace" id="workspace-view">
+        <section class="composer panel">
+          <header><div><p class="eyebrow">Post editor</p><h2 id="editor-heading">New post</h2></div><span class="saved" id="save-state">Saved locally</span></header>
+          <label><span>Working title <em>only you see this</em></span><input id="title" placeholder="Give this draft a name"></label>
+          <label><span>Caption</span><textarea id="caption" rows="7" placeholder="Write once, preview everywhere…"></textarea></label>
+          <div class="media-zone" id="media-zone" tabindex="0"><input id="media-input" type="file" accept="image/*,video/*" multiple hidden><div id="media-empty"><span>↑</span><strong>Drop photos or videos here</strong><small>or click to choose files</small></div><div class="media-grid" id="media-grid"></div></div>
+          <div class="two-col">
+            <label><span>Hashtags</span><input id="hashtags" placeholder="#launch #behindthescenes #smallbusiness"></label>
+            <label><span>Alt text</span><input id="alt-text" placeholder="Describe the image for accessibility"></label>
+          </div>
+          <div class="format-row">
+            <div class="format-note"><strong>Feed post</strong><small>Photos, carousels, or one video.</small></div>
+            <label class="story-toggle"><input id="add-story" type="checkbox"><span><strong>Also add to Story</strong><small>Publishes the first image as a Story on each selected platform.</small></span></label>
+          </div>
+          <fieldset>
+            <legend>Post to</legend>
+            <label class="destination"><input id="dest-facebook" type="checkbox" checked><span class="fb">f</span><span><strong>Facebook Page</strong><small id="facebook-target">Choose after connecting</small></span></label>
+            <label class="destination"><input id="dest-instagram" type="checkbox" checked><span class="ig"><img src="assets/instagram-glyph.svg" alt=""></span><span><strong>Instagram</strong><small id="instagram-target">Professional account required</small></span></label>
+          </fieldset>
+          <div class="two-col">
+            <label><span>Publishing mode</span><select id="mode"><option value="draft">Save locally</option><option value="now">Publish now</option><option value="scheduled">Schedule</option></select></label>
+            <label><span>Date and time</span><input id="schedule" type="datetime-local" disabled></label>
+          </div>
+          <div class="validation" id="validation">Add a caption or media to begin.</div>
+          <footer><button class="danger" id="delete-post">Delete</button><div><button id="clear-editor">Clear</button><button class="primary" id="save-post">Save to workspace</button></div></footer>
+        </section>
+
+        <aside class="right-column">
+          <section class="preview panel">
+            <header><div><p class="eyebrow">Live preview</p><h2>How it will look</h2></div><div class="tabs"><button class="active" data-preview="instagram">Instagram</button><button data-preview="facebook">Facebook</button></div></header>
+            <div class="social-card instagram" id="social-preview"><div class="social-head"><span class="avatar">Q</span><div><strong id="preview-name">Your account</strong><small>Sponsored nowhere · made by you</small></div><b>•••</b></div><div class="preview-media" id="preview-media"><span>Your media preview</span></div><p id="preview-caption">Your caption will appear here.</p><small id="preview-tags"></small></div>
+          </section>
+          <section class="ai-panel panel" id="ai-sidebar-shell" aria-label="AI assistants">
+            <header class="ai-sidebar-header"><div><p class="eyebrow">AI writing room</p><h2 id="ai-provider-title">ChatGPT</h2><small>Sign in directly with your provider</small></div><div class="ai-actions"><button id="ai-reload" title="Reload">↻</button><button id="ai-open-external" title="Open in browser">↗</button></div></header>
+            <nav class="ai-provider-rail" aria-label="Choose an AI assistant"><button class="active" data-ai-provider="chatgpt">GPT</button><button data-ai-provider="claude">Claude</button><button data-ai-provider="gemini">Gemini</button><button data-ai-provider="deepseek">DeepSeek</button><button data-ai-provider="copilot">Copilot</button></nav>
+            <div class="ai-view-space"><span>Choose an assistant to draft captions, tags, and campaign ideas.</span></div>
+          </section>
+          <section class="queue panel">
+            <header><div><p class="eyebrow">Visual queue</p><h2>Your posts</h2></div><div class="queue-tools"><button id="select-all">Select all</button><button id="remove-selected">Remove selected</button><button id="clear-published">Clear published</button><button id="clear-all">Clear Qu</button></div></header>
+            <div id="post-list"></div>
+            <div class="empty" id="empty-list"><span>✦</span><strong>Your workspace is clear</strong><small>Create a post or load the examples.</small><button id="load-demo">Load examples</button></div>
+          </section>
+        </aside>
+      </section>
+
+      <section class="calendar-view panel" id="calendar-view" hidden><header><div><p class="eyebrow">Publishing calendar</p><h2 id="calendar-title"></h2></div><div><button id="calendar-today">Today</button><button id="calendar-back">‹</button><button id="calendar-forward">›</button></div></header><div class="calendar-week"><span>Sunday</span><span>Monday</span><span>Tuesday</span><span>Wednesday</span><span>Thursday</span><span>Friday</span><span>Saturday</span></div><div class="calendar-grid" id="calendar-grid"></div></section>
+      <section class="templates-view panel" id="templates-view" hidden><header><div><p class="eyebrow">Reusable starters</p><h2>Templates</h2></div><button class="primary" id="template-new-post">＋ New post</button></header><p class="templates-intro">Save the current editor as a reusable starting point. Templates keep your caption structure, tags, destinations, and mode, but never duplicate scheduled dates.</p><div class="template-grid" id="template-list"></div><div class="empty" id="template-empty"><span>◇</span><strong>No templates yet</strong><small>Return to the workspace and choose Save template.</small></div></section>
+    </main>
+  </div>
+
+  <dialog id="connect-dialog">
+    <form method="dialog">
+      <button class="dialog-close" value="cancel">×</button>
+      <p class="eyebrow">Meta connection</p><h2>Connect Facebook and Instagram</h2>
+      <p>Qu connects to Facebook Pages you manage and their linked Instagram professional accounts. Personal Facebook profiles and personal Instagram accounts cannot be published through Meta's API.</p>
+      <div class="setup-steps"><span class="done">1</span><div><strong>Qu is ready</strong><small>Your drafts and schedule stay on this computer.</small></div><span>2</span><div><strong>Meta developer app</strong><small>Add your App ID and the Qu OAuth service address.</small></div><span>3</span><div><strong>Choose destinations</strong><small>Select the Pages and Instagram accounts Qu may use.</small></div></div>
+      <label><span>Meta App ID</span><input id="meta-app-id" inputmode="numeric" value="1061788106449322" readonly></label>
+      <label><span>OAuth service address</span><input id="oauth-service" type="url" value="https://qu-meta-auth.nullgurl.workers.dev" readonly></label>
+      <label><span>Publishing Page</span><select id="meta-page"><option value="">Connect Meta to load your Pages</option></select></label>
+      <div class="connection-status" id="connection-status">Setup required. No credentials are stored yet.</div>
+      <div class="dialog-actions"><button type="button" id="disconnect-meta">Disconnect</button><button type="button" id="open-meta-developers">Open Meta developer setup</button><button type="button" class="primary" id="start-meta-connect">Connect Meta</button></div>
+      <small class="security">Your Meta App Secret belongs only in the OAuth service, never in this desktop app or a public repository.</small>
+    </form>
+  </dialog>
+  <dialog id="template-dialog"><form method="dialog"><button class="dialog-close" value="cancel">×</button><p class="eyebrow">Save template</p><h2>Name this reusable post</h2><label><span>Template name</span><input id="template-name" placeholder="Weekly update, Product launch…"></label><div class="dialog-actions"><button value="cancel">Cancel</button><button type="button" class="primary" id="confirm-template">Save template</button></div></form></dialog>
+  <dialog id="image-editor-dialog" class="image-editor-dialog"><form method="dialog"><button class="dialog-close" value="cancel">×</button><p class="eyebrow">Image studio</p><h2>Crop and style your image</h2><div class="image-editor-layout"><div class="crop-stage" id="crop-stage"><canvas id="crop-canvas" width="1080" height="1080"></canvas></div><aside><label><span>Aspect ratio</span><select id="crop-ratio"><option value="1:1">Square · 1:1</option><option value="4:5">Portrait · 4:5</option><option value="1.91:1">Landscape · 1.91:1</option><option value="9:16">Story / Reel · 9:16</option></select></label><label><span>Zoom</span><input id="crop-zoom" type="range" min="1" max="3" value="1" step="0.01"></label><label><span>Horizontal position</span><input id="crop-x" type="range" min="-1" max="1" value="0" step="0.01"></label><label><span>Vertical position</span><input id="crop-y" type="range" min="-1" max="1" value="0" step="0.01"></label><div><span class="control-label">Filter</span><div class="filter-grid" id="filter-grid"><button type="button" class="active" data-filter="normal">Normal</button><button type="button" data-filter="clarendon">Clarendon</button><button type="button" data-filter="gingham">Gingham</button><button type="button" data-filter="juno">Juno</button><button type="button" data-filter="lark">Lark</button><button type="button" data-filter="moon">Moon</button><button type="button" data-filter="reyes">Reyes</button><button type="button" data-filter="valencia">Valencia</button></div></div></aside></div><div class="dialog-actions"><button type="button" id="reset-image-edit">Reset</button><button value="cancel">Cancel</button><button type="button" class="primary" id="apply-image-edit">Apply to image</button></div></form></dialog>
+  <script src="renderer.js"></script>
+</body>
+</html>
