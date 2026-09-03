@@ -1,0 +1,14 @@
+name = "qu-meta-auth"
+main = "src/worker.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+[vars]
+META_APP_ID = "1061788106449322"
+META_CONFIG_ID = "906018465916031"
+
+# Add META_APP_SECRET with `wrangler secret put META_APP_SECRET`.
+
+[[kv_namespaces]]
+binding = "QU_META_SESSIONS"
+id = "72160bf489374dafa6bc6dc700cac574"

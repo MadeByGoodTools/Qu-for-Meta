@@ -1,0 +1,27 @@
+{
+  "name": "qu-for-meta",
+  "version": "1.2.0",
+  "description": "Qu for Meta — a visual desktop publishing workspace for Facebook Pages and Instagram professional accounts.",
+  "author": "NullGurll",
+  "license": "MPL-2.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test && node --check main.js && node --check preload.js && node --check renderer.js",
+    "dist:mac": "electron-builder --mac dmg zip",
+    "dist:win": "electron-builder --win nsis zip --x64"
+  },
+  "devDependencies": {
+    "electron": "^37.2.3",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "ca.goodtools.qumeta",
+    "productName": "Qu for Meta",
+    "directories": {"output": "dist"},
+    "files": ["main.js","preload.js","renderer.js","index.html","styles.css","enhancements.css","assets/**/*","package.json"],
+    "mac": {"category": "public.app-category.social-networking","icon": "assets/qu-meta-1024.png","target": ["dmg","zip"]},
+    "win": {"icon": "assets/qu-meta-1024.png","target": ["nsis","zip"]},
+    "nsis": {"oneClick": false,"allowToChangeInstallationDirectory": true,"createDesktopShortcut": true,"createStartMenuShortcut": true}
+  }
+}

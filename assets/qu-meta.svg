@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="instagram" x1="112" y1="80" x2="900" y2="936" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#833AB4"/>
+      <stop offset=".48" stop-color="#E1306C"/>
+      <stop offset=".76" stop-color="#F56040"/>
+      <stop offset="1" stop-color="#FCAF45"/>
+    </linearGradient>
+    <linearGradient id="letter" x1="350" y1="180" x2="682" y2="878" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#272A31"/>
+      <stop offset=".5" stop-color="#111318"/>
+      <stop offset="1" stop-color="#020306"/>
+    </linearGradient>
+  </defs>
+  <rect x="48" y="48" width="928" height="928" rx="250" fill="#0B0D12"/>
+  <rect x="78" y="78" width="868" height="868" rx="222" fill="url(#instagram)"/>
+  <path d="M202 495c0-182 118-306 306-306s306 124 306 306c0 91-29 167-82 221l95 91-105 103-105-102c-34 12-70 18-109 18-188 0-306-130-306-331Zm151 0c0 113 57 185 155 185 16 0 31-2 45-6l-69-67 101-99 68 66c7-23 10-49 10-79 0-112-57-181-155-181s-155 69-155 181Z" fill="url(#letter)"/>
+</svg>

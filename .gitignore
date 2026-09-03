@@ -1,0 +1,10 @@
+node_modules/
+dist/
+approval/
+.wrangler/
+.DS_Store
+*.log
+*.blockmap
+.env
+.env.*
+
