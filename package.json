@@ -1,6 +1,6 @@
 {
   "name": "qu-for-meta",
-  "version": "1.2.0",
+  "version": "1.6.0",
   "description": "Qu for Meta — a visual desktop publishing workspace for Facebook Pages and Instagram professional accounts.",
   "author": "NullGurll",
   "license": "MPL-2.0",
@@ -18,10 +18,45 @@
   "build": {
     "appId": "ca.goodtools.qumeta",
     "productName": "Qu for Meta",
-    "directories": {"output": "dist"},
-    "files": ["main.js","preload.js","renderer.js","index.html","styles.css","enhancements.css","assets/**/*","package.json"],
-    "mac": {"category": "public.app-category.social-networking","icon": "assets/qu-meta-1024.png","target": ["dmg","zip"]},
-    "win": {"icon": "assets/qu-meta-1024.png","target": ["nsis","zip"]},
-    "nsis": {"oneClick": false,"allowToChangeInstallationDirectory": true,"createDesktopShortcut": true,"createStartMenuShortcut": true}
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "index.html",
+      "styles.css",
+      "enhancements.css",
+      "assets/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/**"
+    ],
+    "mac": {
+      "category": "public.app-category.social-networking",
+      "icon": "assets/qu-meta-1024.png",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "win": {
+      "icon": "assets/qu-meta-1024.png",
+      "target": [
+        "nsis",
+        "zip"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.3.0"
   }
 }

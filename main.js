@@ -1,5 +1,10 @@
 const { app, BrowserWindow, WebContentsView, ipcMain, shell, safeStorage } = require('electron');
 const path = require('path');
+const fs = require('fs');
+const { pathToFileURL } = require('url');
+const { randomUUID } = require('crypto');
+const { spawn } = require('child_process');
+const ffmpegStatic = require('ffmpeg-static');
 
 let mainWindow;
 const aiSidebars = new Map();
@@ -110,11 +115,85 @@ async function graph(pathname, accessToken, options = {}) {
   return result;
 }
 
+ipcMain.handle('check-meta-access', async (_event, accessToken) => {
+  if (!accessToken) throw new Error('Meta access token is missing.');
+  const required = ['pages_show_list','pages_read_engagement','pages_manage_posts','business_management','instagram_basic','instagram_content_publish'];
+  const result = await graph('me/permissions', accessToken);
+  const granted = new Set((result.data || []).filter(item => item.status === 'granted').map(item => item.permission));
+  return { granted: required.filter(permission => granted.has(permission)), missing: required.filter(permission => !granted.has(permission)) };
+});
+
 function mediaBlob(item) {
+  if (item.filePath) {
+    const allowedRoot = path.join(app.getPath('userData'), 'media-cache') + path.sep;
+    const resolved = path.resolve(item.filePath);
+    if (!resolved.startsWith(allowedRoot)) throw new Error(`Could not safely read ${item.name || 'media file'}.`);
+    return new Blob([fs.readFileSync(resolved)], { type: item.type || 'application/octet-stream' });
+  }
   const match = /^data:([^;,]+);base64,(.+)$/.exec(item.dataUrl || '');
   if (!match) throw new Error(`Could not read ${item.name || 'media file'}.`);
   return new Blob([Buffer.from(match[2], 'base64')], { type: match[1] });
 }
+
+ipcMain.handle('cache-media', (_event, item) => {
+  const match = /^data:([^;,]+);base64,(.+)$/.exec(item?.dataUrl || '');
+  if (!match) throw new Error(`Could not prepare ${item?.name || 'media file'} for local storage.`);
+  const folder = path.join(app.getPath('userData'), 'media-cache');
+  fs.mkdirSync(folder, { recursive: true });
+  const extension = path.extname(item.name || '').replace(/[^.a-z0-9]/gi, '').slice(0, 10) || (match[1].startsWith('video/') ? '.mp4' : '.jpg');
+  const filePath = path.join(folder, `${randomUUID()}${extension}`);
+  fs.writeFileSync(filePath, Buffer.from(match[2], 'base64'));
+  return { filePath, previewUrl: pathToFileURL(filePath).href, type: item.type || match[1], name: item.name || path.basename(filePath), size: fs.statSync(filePath).size };
+});
+
+function safeCachedPath(filePath) {
+  const allowedRoot = path.join(app.getPath('userData'), 'media-cache') + path.sep;
+  const resolved = path.resolve(filePath || '');
+  if (!resolved.startsWith(allowedRoot)) throw new Error('The Story media file is outside Qu’s protected cache.');
+  return resolved;
+}
+
+ipcMain.handle('transcode-story-video', async (_event, item) => {
+  const input = safeCachedPath(item?.filePath), output = path.join(app.getPath('userData'), 'media-cache', `${randomUUID()}-story.mp4`);
+  const ffmpeg = app.isPackaged ? ffmpegStatic.replace('app.asar', 'app.asar.unpacked') : ffmpegStatic;
+  await new Promise((resolve, reject) => {
+    const process = spawn(ffmpeg, ['-y','-i',input,'-c:v','libx264','-pix_fmt','yuv420p','-movflags','+faststart','-an',output]);
+    let errors = ''; process.stderr.on('data', chunk => { errors += chunk.toString(); if (errors.length > 12000) errors = errors.slice(-12000); });
+    process.on('error', reject); process.on('close', code => code === 0 ? resolve() : reject(new Error(`Video conversion failed (${code}). ${errors.split('\n').slice(-3).join(' ')}`)));
+  });
+  return { filePath: output, previewUrl: pathToFileURL(output).href, type: 'video/mp4', name: path.basename(output), size: fs.statSync(output).size };
+});
+
+function giphyUrl(value) {
+  const url = new URL(value);
+  if (url.protocol !== 'https:' || !(url.hostname === 'giphy.com' || url.hostname.endsWith('.giphy.com'))) throw new Error('That GIF is not hosted by GIPHY.');
+  return url;
+}
+
+ipcMain.handle('search-giphy', async (_event, apiKey, query) => {
+  if (!String(apiKey || '').trim()) throw new Error('Add your GIPHY API key first.');
+  const term = String(query || '').trim();
+  const endpoint = new URL(`https://api.giphy.com/v1/gifs/${term ? 'search' : 'trending'}`);
+  endpoint.searchParams.set('api_key', String(apiKey).trim());
+  endpoint.searchParams.set('limit', '24');
+  endpoint.searchParams.set('rating', 'pg-13');
+  if (term) endpoint.searchParams.set('q', term.slice(0, 50));
+  const response = await fetch(endpoint, { headers: { accept: 'application/json' } });
+  const result = await response.json();
+  if (!response.ok || result.meta?.status >= 400) throw new Error(result.meta?.msg || `GIPHY search failed (${response.status}).`);
+  return (result.data || []).map(gif => ({ id: gif.id, title: gif.title || 'GIPHY GIF', previewUrl: gif.images?.fixed_width_small?.webp || gif.images?.fixed_width?.webp, sourceUrl: gif.images?.original?.url, width: Number(gif.images?.original?.width) || 1, height: Number(gif.images?.original?.height) || 1 })).filter(gif => gif.previewUrl && gif.sourceUrl);
+});
+
+ipcMain.handle('import-giphy', async (_event, item) => {
+  const url = giphyUrl(item?.sourceUrl);
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`GIPHY could not provide this GIF (${response.status}).`);
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (bytes.length > 25 * 1024 * 1024) throw new Error('This GIF is larger than Qu’s 25 MB Story limit.');
+  const folder = path.join(app.getPath('userData'), 'media-cache'); fs.mkdirSync(folder, { recursive: true });
+  const filePath = path.join(folder, `${randomUUID()}-giphy.gif`); fs.writeFileSync(filePath, bytes);
+  return { filePath, previewUrl: pathToFileURL(filePath).href, type: 'image/gif', name: `${String(item?.title || 'giphy').replace(/[^a-z0-9-_ ]/gi, '').slice(0, 60) || 'giphy'}.gif`, size: bytes.length };
+});
 
 function fullCaption(post) {
   const tags = (post.hashtags || []).map(tag => `#${String(tag).replace(/^#+/, '').replace(/\s+/g, '')}`).join(' ');
@@ -165,7 +244,45 @@ async function publishFacebook(post, page, userToken) {
   return graph(`${page.id}/feed`, credentials.access_token, { method: 'POST', params: { message: caption } });
 }
 
-async function publishFacebookStory(post,page,userToken){const credentials=await pageCredentials(userToken,page.id);const image=(post.media||[])[0];if(!image?.type?.startsWith('image/'))throw new Error('Facebook Stories require an image as the first media item.');const form=new FormData();form.set('published','false');form.set('source',mediaBlob(image),image.name||'story.jpg');const uploaded=await graph(`${page.id}/photos`,credentials.access_token,{method:'POST',form});return graph(`${page.id}/photo_stories`,credentials.access_token,{method:'POST',params:{photo_id:uploaded.id}})}
+async function uploadFacebookStoryVideo(uploadUrl, accessToken, item) {
+  const blob = mediaBlob(item);
+  const response = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: { authorization: `OAuth ${accessToken}`, offset: '0', file_size: String(blob.size), 'content-type': 'application/octet-stream' },
+    body: blob
+  });
+  const text = await response.text();
+  let result = {};
+  try { result = text ? JSON.parse(text) : {}; } catch { result = {}; }
+  if (!response.ok || result.error || result.success === false) throw new Error(result.error?.message || `Facebook could not upload the Story video (${response.status}).`);
+  return result;
+}
+
+async function publishFacebookReel(post, page, userToken) {
+  const credentials = await pageCredentials(userToken, page.id);
+  const items = post.media || [];
+  if (items.length !== 1 || !items[0].type.startsWith('video/')) throw new Error('Facebook Reels require exactly one video.');
+  const started = await graph(`${page.id}/video_reels`, credentials.access_token, { method: 'POST', params: { upload_phase: 'start' } });
+  if (!started.video_id || !started.upload_url) throw new Error('Facebook did not create a Reel upload session.');
+  await uploadFacebookStoryVideo(started.upload_url, credentials.access_token, items[0]);
+  return graph(`${page.id}/video_reels`, credentials.access_token, { method: 'POST', params: { upload_phase: 'finish', video_id: started.video_id, video_state: 'PUBLISHED', description: fullCaption(post) } });
+}
+
+async function publishFacebookStory(post, page, userToken) {
+  const credentials = await pageCredentials(userToken, page.id);
+  const item = post.storyMedia || (post.media || [])[0];
+  if (!item) throw new Error('Facebook Stories require a photo or video.');
+  if (item.type.startsWith('video/')) {
+    const started = await graph(`${page.id}/video_stories`, credentials.access_token, { method: 'POST', params: { upload_phase: 'start' } });
+    if (!started.video_id || !started.upload_url) throw new Error('Facebook did not create a Story video upload session.');
+    await uploadFacebookStoryVideo(started.upload_url, credentials.access_token, item);
+    return graph(`${page.id}/video_stories`, credentials.access_token, { method: 'POST', params: { upload_phase: 'finish', video_id: started.video_id, video_state: 'PUBLISHED' } });
+  }
+  if (!item.type.startsWith('image/')) throw new Error('Facebook could not recognize the first Story media item.');
+  const form = new FormData(); form.set('published', 'false'); form.set('source', mediaBlob(item), item.name || 'story.jpg');
+  const uploaded = await graph(`${page.id}/photos`, credentials.access_token, { method: 'POST', form });
+  return graph(`${page.id}/photo_stories`, credentials.access_token, { method: 'POST', params: { photo_id: uploaded.id } });
+}
 
 async function waitForContainer(containerId, token) {
   for (let attempt = 0; attempt < 30; attempt += 1) {
@@ -204,16 +321,36 @@ async function publishInstagram(post, page, userToken, service) {
   return graph(`${ig.id}/media_publish`, credentials.access_token, { method: 'POST', params: { creation_id: container.id } });
 }
 
-async function publishInstagramStory(post,page,userToken,service){const credentials=await pageCredentials(userToken,page.id);const ig=credentials.instagram_business_account;if(!ig?.id)throw new Error('The selected Page has no linked Instagram professional account.');const image=(post.media||[])[0];if(!image?.type?.startsWith('image/'))throw new Error('Instagram Stories require an image as the first media item.');const url=await uploadTemporaryMedia(service,userToken,image);const container=await graph(`${ig.id}/media`,credentials.access_token,{method:'POST',params:{media_type:'STORIES',image_url:url}});await waitForContainer(container.id,credentials.access_token);return graph(`${ig.id}/media_publish`,credentials.access_token,{method:'POST',params:{creation_id:container.id}})}
+async function publishInstagramReel(post, page, userToken, service) {
+  const items = post.media || [];
+  if (items.length !== 1 || !items[0].type.startsWith('video/')) throw new Error('Instagram Reels require exactly one video.');
+  return publishInstagram(post, page, userToken, service);
+}
+
+async function publishInstagramStory(post, page, userToken, service) {
+  const credentials = await pageCredentials(userToken, page.id);
+  const ig = credentials.instagram_business_account;
+  if (!ig?.id) throw new Error('The selected Page has no linked Instagram professional account.');
+  const item = post.storyMedia || (post.media || [])[0];
+  if (!item || !/^(image|video)\//.test(item.type || '')) throw new Error('Instagram Stories require a photo or video.');
+  const url = await uploadTemporaryMedia(service, userToken, item);
+  const mediaParameter = item.type.startsWith('video/') ? 'video_url' : 'image_url';
+  const container = await graph(`${ig.id}/media`, credentials.access_token, { method: 'POST', params: { media_type: 'STORIES', [mediaParameter]: url } });
+  await waitForContainer(container.id, credentials.access_token);
+  return graph(`${ig.id}/media_publish`, credentials.access_token, { method: 'POST', params: { creation_id: container.id } });
+}
 
 ipcMain.handle('publish-meta-post', async (_event, payload) => {
   if (!safeStorage.isEncryptionAvailable()) throw new Error('Protected credential storage is unavailable.');
   const token = safeStorage.decryptString(Buffer.from(payload.protectedToken, 'base64'));
   const result = { successes: {}, errors: {} };
-  const tasks=payload.post.tasks||payload.post.destinations.flatMap(destination=>[`${destination}Feed`,...(payload.post.addToStory?[`${destination}Story`]:[])]);
+  const primaryTask=payload.post.format==='reel'?'Reel':'Feed';
+  const tasks=payload.post.tasks||payload.post.destinations.flatMap(destination=>[`${destination}${primaryTask}`,...(payload.post.addToStory?[`${destination}Story`]:[])]);
   if(tasks.includes('FacebookFeed'))try{result.successes.FacebookFeed=await publishFacebook(payload.post,payload.page,token)}catch(error){result.errors.FacebookFeed=error.message}
+  if(tasks.includes('FacebookReel'))try{result.successes.FacebookReel=await publishFacebookReel(payload.post,payload.page,token)}catch(error){result.errors.FacebookReel=error.message}
   if(tasks.includes('FacebookStory'))try{result.successes.FacebookStory=await publishFacebookStory(payload.post,payload.page,token)}catch(error){result.errors.FacebookStory=error.message}
   if(tasks.includes('InstagramFeed'))try{result.successes.InstagramFeed=await publishInstagram(payload.post,payload.page,token,payload.service)}catch(error){result.errors.InstagramFeed=error.message}
+  if(tasks.includes('InstagramReel'))try{result.successes.InstagramReel=await publishInstagramReel(payload.post,payload.page,token,payload.service)}catch(error){result.errors.InstagramReel=error.message}
   if(tasks.includes('InstagramStory'))try{result.successes.InstagramStory=await publishInstagramStory(payload.post,payload.page,token,payload.service)}catch(error){result.errors.InstagramStory=error.message}
   return result;
 });
